@@ -20,12 +20,14 @@ end
 @args[:skip_primary] = true if @args[:skip_primary].nil?
 
 TABLE        = 0
+NON_UNIQUE   = 1
 KEY_NAME     = 2
 SEQ_IN_INDEX = 3
 COLUMN_NAME  = 4
 
 @mysql_base = "mysql -u #{@args[:user]} -h #{@args[:host]} #{@args[:dbname]} --password='#{@args[:password]}' -N -B -e"
 @create_index_base = "CREATE INDEX %{idx_name} ON %{table_name}(%{columns});"
+@unique_index_base = "CREATE UNIQUE INDEX %{idx_name} ON %{table_name}(%{columns});"
 @drop_index_base   = "ALTER TABLE %{table_name} DROP INDEX %{idx_name};"
 @fkc_on  = "SET FOREIGN_KEY_CHECKS=1;"
 @fkc_off = "SET FOREIGN_KEY_CHECKS=0;"
@@ -78,11 +80,15 @@ elsif @args[:do] == "create"
       a[SEQ_IN_INDEX] <=> b[SEQ_IN_INDEX]
     end
 
-    create_index_sql = @create_index_base % {idx_name:   @table_idxs[table_key_name][0][KEY_NAME],
-                                             table_name: sorted[0][TABLE],
-                                             columns:    sorted.map{|s| s[COLUMN_NAME]}.join(",")}
-
-    puts create_index_sql
+    if @table_idxs[table_key_name][0][NON_UNIQUE].to_i == 0 
+      puts @unique_index_base % {idx_name:   @table_idxs[table_key_name][0][KEY_NAME],
+                                 table_name: sorted[0][TABLE],
+                                 columns:    sorted.map{|s| s[COLUMN_NAME]}.join(",")}
+    else
+      puts @create_index_base % {idx_name:   @table_idxs[table_key_name][0][KEY_NAME],
+                                 table_name: sorted[0][TABLE],
+                                 columns:    sorted.map{|s| s[COLUMN_NAME]}.join(",")}
+    end
   end
   puts @fkc_on
 else
