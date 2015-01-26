@@ -27,6 +27,8 @@ COLUMN_NAME  = 4
 @mysql_base = "mysql -u #{@args[:user]} -h #{@args[:host]} #{@args[:dbname]} --password='#{@args[:password]}' -N -B -e"
 @create_index_base = "CREATE INDEX %{idx_name} ON %{table_name}(%{columns});"
 @drop_index_base   = "ALTER TABLE %{table_name} DROP INDEX %{idx_name};"
+@fkc_on  = "SET FOREIGN_KEY_CHECKS=1;"
+@fkc_off = "SET FOREIGN_KEY_CHECKS=0;"
 
 @table_idxs = {}
 
@@ -58,16 +60,19 @@ if @args[:do] == "drop"
   @tables     = show_tables()
   @table_idxs = show_index(@tables)
 
+  puts @fkc_off
   @table_idxs.each_key do |__key_name|
     drop_index_sql = @drop_index_base % {table_name: @table_idxs[__key_name][0][TABLE],
                                          idx_name:   __key_name}
 
     puts drop_index_sql
   end
+  puts @fkc_on
 elsif @args[:do] == "create"
   @tables     = show_tables()
   @table_idxs = show_index(@tables)
 
+  puts @fkc_off
   @table_idxs.each_key do |__key_name|
     sorted = @table_idxs[__key_name].sort do |a, b|
       a[SEQ_IN_INDEX] <=> b[SEQ_IN_INDEX]
@@ -79,6 +84,7 @@ elsif @args[:do] == "create"
 
     puts create_index_sql
   end
+  puts @fkc_on
 else
   puts "--dump-drop-sql or --dump-create-sql is required"
   exit 1
