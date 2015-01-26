@@ -10,14 +10,14 @@ OptionParser.new do |opt|
   opt.on("--host HOST", "Connect to the MySQL server on the given host"){|v| @args[:host] = v }
   opt.on("-d DBNAME", "--dbname DBNAME", "The database to use. This is useful primarily in an option file"){|v| @args[:dbname] = v }
   opt.on("-p PASSWORD", "--password PASSWORD", "Password to use when connecting to server"){|v| @args[:password] = v }
-  opt.on("--skip-primary", "Skip PRIMARY"){|v| @args[:skip_primary] = v }
+  opt.on("--primary", "Dump PRIMARY"){|v| @args[:skip_primary] = false }
   opt.on("--dump-drop-sql", "Dump DROP INDEX SQL"){|v| @args[:do] = "drop" }
   opt.on("--dump-create-sql", "Dump CREATE INDEX SQL"){|v| @args[:do] = "create" }
   opt.on("-v", "--version", "Show version"){|v| puts("#{File.basename(__FILE__)} #{@version}"); exit 1; }
   opt.parse!(ARGV)
 end
 
-@args[:skip_primary] ||= true
+@args[:skip_primary] = true if @args[:skip_primary].nil?
 
 TABLE        = 0
 KEY_NAME     = 2

@@ -9,8 +9,9 @@ Usage: mysqldumpindex [options]
         --host HOST                  Connect to the MySQL server on the given host
     -d, --dbname DBNAME              The database to use. This is useful primarily in an option file
     -p, --password PASSWORD          Password to use when connecting to server
-        --skip-primary               Skip PRIMARY
+        --primary                    Dump PRIMARY
         --dump-drop-sql              Dump DROP INDEX SQL
         --dump-create-sql            Dump CREATE INDEX SQL
     -v, --version                    Show version
 ```
+
