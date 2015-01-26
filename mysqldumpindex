@@ -48,8 +48,8 @@ def show_index(_tables)
 
       next if @args[:skip_primary] && idx_row[KEY_NAME] == "PRIMARY"
 
-      idxs[idx_row[KEY_NAME]] ||= []
-      idxs[idx_row[KEY_NAME]].push(idx_row)
+      idxs["#{table}_#{idx_row[KEY_NAME]}"] ||= []
+      idxs["#{table}_#{idx_row[KEY_NAME]}"].push(idx_row)
     end
   end
 
@@ -61,9 +61,9 @@ if @args[:do] == "drop"
   @table_idxs = show_index(@tables)
 
   puts @fkc_off
-  @table_idxs.each_key do |__key_name|
-    drop_index_sql = @drop_index_base % {table_name: @table_idxs[__key_name][0][TABLE],
-                                         idx_name:   __key_name}
+  @table_idxs.each_key do |table_key_name|
+    drop_index_sql = @drop_index_base % {table_name: @table_idxs[table_key_name][0][TABLE],
+                                         idx_name:   @table_idxs[table_key_name][0][KEY_NAME]}
 
     puts drop_index_sql
   end
@@ -73,12 +73,12 @@ elsif @args[:do] == "create"
   @table_idxs = show_index(@tables)
 
   puts @fkc_off
-  @table_idxs.each_key do |__key_name|
-    sorted = @table_idxs[__key_name].sort do |a, b|
+  @table_idxs.each_key do |table_key_name|
+    sorted = @table_idxs[table_key_name].sort do |a, b|
       a[SEQ_IN_INDEX] <=> b[SEQ_IN_INDEX]
     end
 
-    create_index_sql = @create_index_base % {idx_name:   __key_name,
+    create_index_sql = @create_index_base % {idx_name:   @table_idxs[table_key_name][0][KEY_NAME],
                                              table_name: sorted[0][TABLE],
                                              columns:    sorted.map{|s| s[COLUMN_NAME]}.join(",")}
 
