@@ -1,0 +1,85 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+
+@args = {}
+@version = "0.1"
+
+OptionParser.new do |opt|
+  opt.on("-u USER", "--user USER", "The MySQL user name to use when connecting to the server"){|v| @args[:user] = v }
+  opt.on("--host HOST", "Connect to the MySQL server on the given host"){|v| @args[:host] = v }
+  opt.on("-d DBNAME", "--dbname DBNAME", "The database to use. This is useful primarily in an option file"){|v| @args[:dbname] = v }
+  opt.on("-p PASSWORD", "--password PASSWORD", "Password to use when connecting to server"){|v| @args[:password] = v }
+  opt.on("--skip-primary", "Skip PRIMARY"){|v| @args[:skip_primary] = v }
+  opt.on("--dump-drop-sql", "Dump DROP INDEX SQL"){|v| @args[:do] = "drop" }
+  opt.on("--dump-create-sql", "Dump CREATE INDEX SQL"){|v| @args[:do] = "create" }
+  opt.on("-v", "--version", "Show version"){|v| puts("#{File.basename(__FILE__)} #{@version}"); exit 1; }
+  opt.parse!(ARGV)
+end
+
+@args[:skip_primary] ||= true
+
+TABLE        = 0
+KEY_NAME     = 2
+SEQ_IN_INDEX = 3
+COLUMN_NAME  = 4
+
+@mysql_base = "mysql -u #{@args[:user]} -h #{@args[:host]} #{@args[:dbname]} --password='#{@args[:password]}' -N -B -e"
+@create_index_base = "CREATE INDEX %{idx_name} ON %{table_name}(%{columns});"
+@drop_index_base   = "ALTER TABLE %{table_name} DROP INDEX %{idx_name};"
+
+@table_idxs = {}
+
+@tables = []
+
+def show_tables()
+  `#{@mysql_base} "SHOW TABLES;"`.each_line.map{|t| t.chomp!}
+end
+
+def show_index(_tables)
+  idxs = {}
+
+  _tables.each do |table|
+    `#{@mysql_base} "SHOW INDEX FROM #{table};"`.each_line do |idx|
+      idx.chomp!
+      idx_row = idx.split("\t")
+
+      next if @args[:skip_primary] && idx_row[KEY_NAME] == "PRIMARY"
+
+      idxs[idx_row[KEY_NAME]] ||= []
+      idxs[idx_row[KEY_NAME]].push(idx_row)
+    end
+  end
+
+  idxs
+end
+
+if @args[:do] == "drop"
+  @tables     = show_tables()
+  @table_idxs = show_index(@tables)
+
+  @table_idxs.each_key do |__key_name|
+    drop_index_sql = @drop_index_base % {table_name: @table_idxs[__key_name][0][TABLE],
+                                         idx_name:   __key_name}
+
+    puts drop_index_sql
+  end
+elsif @args[:do] == "create"
+  @tables     = show_tables()
+  @table_idxs = show_index(@tables)
+
+  @table_idxs.each_key do |__key_name|
+    sorted = @table_idxs[__key_name].sort do |a, b|
+      a[SEQ_IN_INDEX] <=> b[SEQ_IN_INDEX]
+    end
+
+    create_index_sql = @create_index_base % {idx_name:   __key_name,
+                                             table_name: sorted[0][TABLE],
+                                             columns:    sorted.map{|s| s[COLUMN_NAME]}.join(",")}
+
+    puts create_index_sql
+  end
+else
+  puts "--dump-drop-sql or --dump-create-sql is required"
+  exit 1
+end
