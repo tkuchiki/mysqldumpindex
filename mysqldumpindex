@@ -17,6 +17,9 @@ OptionParser.new do |opt|
   opt.parse!(ARGV)
 end
 
+@args[:user]       ||= 'root'
+@args[:host]       ||= 'localhost'
+@args[:password]   ||= ''
 @args[:skip_primary] = true if @args[:skip_primary].nil?
 
 TABLE        = 0
